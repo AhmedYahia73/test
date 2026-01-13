@@ -53,6 +53,8 @@ class LiveSessionsTable
                         ->whereTime('from', '<=', $currentTime->copy()->addMinutes(30)->format('H:i:s'))
                         ->whereTime('to', '>=', $currentTime->format('H:i:s'));
                     })
+                    ->whereDate("start_date", "<=", now())
+                    ->whereDate("end_date", ">=", now())
                     ->whereDate("date_link", $currentTime)
                     ->whereHas("students", function($query){
                         $query->where("users.id", auth()->user()->id);

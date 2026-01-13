@@ -77,8 +77,8 @@ class SessionsTable
                                 ->whereTime('from', '<=', $startTimeLimit)
                                 ->whereTime('to', '>', $currentTime); 
                         })
-                        ->where("start_date", "<=", date("Y-m-d"))
-                        ->where("end_date", ">=", date("Y-m-d"))
+                    ->whereDate("start_date", "<=", now())
+                    ->whereDate("end_date", ">=", now())
                         ->whereHas("students", function(Builder $q) {
                             $q->where("users.id", auth()->id());
                         });

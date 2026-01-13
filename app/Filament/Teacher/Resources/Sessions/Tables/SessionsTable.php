@@ -64,7 +64,9 @@ class SessionsTable
                         $subQuery->where('day', $today)
                         ->whereTime('from', '<=', $currentTime->copy()->addHours(2)->format('H:i:s'))
                         ->whereTime('to', '>=', $currentTime->format('H:i:s'));
-                    });
+                    })
+                    ->whereDate("start_date", "<=", now())
+                    ->whereDate("end_date", ">=", now());
                 })
             ])
             ->recordActions([
