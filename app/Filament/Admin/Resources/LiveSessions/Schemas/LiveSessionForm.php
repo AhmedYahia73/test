@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -62,6 +63,17 @@ class LiveSessionForm
                     ->columns(3) // عرض الحقول بجانب بعضها داخل الـ Repeater
                     ->addActionLabel('Add New Time Slot')
                     ->collapsible(), // إمكانية طي المواعيد لتنظيم الشكل
+            ]),
+
+            Section::make('Schedule')
+            ->schema([ 
+                DatePicker::make('start_date')
+                    ->label('Start Date')
+                    ->required(),
+                
+                DatePicker::make('end_date')
+                    ->label('End Date')
+                    ->required(),
             ]),
             Section::make('Students Enrollment')
             ->description('Assign students to this live session')
