@@ -20,52 +20,17 @@ class LiveSessionsTable
         return $table
             ->columns([
                 TextColumn::make('name')->searchable(),
-                TextColumn::make('teacher')
-                ->label('Teacher')
-                ->getStateUsing(function ($record) use ($today, $now) {
-                    return $record->actualSessions()
-                    ->whereDate('date', now()->toDateString())
-                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
-                    ->where('to', '>', now()->toDateTimeString())
-                    ->first()?->teacher?->name ?? $record?->teacher?->name;
-                }),
-                TextColumn::make('students_count')
-                ->label('Enrolled Students')
-                ->counts('students')
+                TextColumn::make('teacher.name')
+                ->label('Teacher'),
+                TextColumn::make('start_date')
+                ->label('Start Date')
                 ->badge()  
                 ->sortable(),
-                TextColumn::make('student_entered')
-                ->label('Students Entered')
-                ->badge()  
-                ->getStateUsing(function ($record) use ($today, $now) {
-                    return $record->actualSessions()
-                    ->whereDate('date', now()->toDateString())
-                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
-                    ->where('to', '>', now()->toDateTimeString())
-                    ->first()?->students_attendance->count() ?? 0;
-                }),
-                TextColumn::make('teacher_entered')
-                ->label('Teacher Entered')
-                ->badge()  
-                ->getStateUsing(function ($record) use ($today, $now) {
-                    return $record->actualSessions()
-                    ->whereDate('date', now()->toDateString())
-                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
-                    ->where('to', '>', now()->toDateTimeString())
-                    ->first()?->teacher_id ? "Yes" : "No";
-                })
+                TextColumn::make('end_date')
+                ->label('End Date')
+                ->badge(),
             ])
-            ->filters([
-                Filter::make('upcoming_sessions')
-                ->label('Today\'s Upcoming Sessions')
-                ->default()
-                ->query(function (Builder $query) use ($today) {
-                    return $query->whereHas('actualSessions', function (Builder $subQuery) {
-                        $subQuery->whereDate('date', now())
-                        ->where('from', '<=', now()->addMinutes(120))
-                        ->where('to', '>', now());
-                    });
-                })
+            ->filters([ 
             ])
             ->recordActions([
                 EditAction::make(),

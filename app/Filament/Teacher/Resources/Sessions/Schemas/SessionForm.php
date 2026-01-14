@@ -16,20 +16,7 @@ class SessionForm
             ->components([
                 TextInput::make('link')
                 ->required()
-                ->label('Session Name')
-                ->afterStateHydrated(function (TextInput $component, $state, $record) {
-                    if ($record) {
-                        $today = Carbon::today()->toDateString();
-                        $savedDate = $record->date_link;
-
-                        if ($savedDate !== $today) {
-                            $component->state(null);
-                        }
-                    }
-                }),
-                Hidden::make('date_link')
-                ->default(now()->toDateString()) // القيمة الافتراضية للجديد
-                ->dehydrated(fn ($state) => true),
+                ->label('Session Link'), 
             ]);
     }
 }

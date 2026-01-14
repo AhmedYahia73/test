@@ -6,7 +6,7 @@ use BackedEnum;
 use Carbon\Carbon;
 use App\Models\Session;
 use Filament\Tables\Table;
-use App\Models\LiveSession;
+use App\Models\SessionTimes;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
@@ -19,11 +19,11 @@ use App\Filament\Teacher\Resources\Sessions\Tables\SessionsTable;
 
 class SessionResource extends Resource
 {
-    protected static ?string $model = LiveSession::class;
+    protected static ?string $model = SessionTimes::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $recordTitleAttribute = 'LiveSession';
+    protected static ?string $recordTitleAttribute = 'Session Times';
 
     public static function form(Schema $schema): Schema
     {

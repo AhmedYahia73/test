@@ -14,7 +14,13 @@ class SessionTimes extends Model
         'date',
         'link',
         'teacher_id',
+        'tacher_entered',
     ]; 
+
+    public function session()
+    {
+        return $this->belongsTo(LiveSession::class, "session_id");
+    }
 
     public function students_attendance()
     {

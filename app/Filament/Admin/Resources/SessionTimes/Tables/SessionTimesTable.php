@@ -1,10 +1,8 @@
 <?php
 
-namespace App\Filament\Teacher\Resources\Sessions\Tables;
+namespace App\Filament\Admin\Resources\SessionTimes\Tables;
 
-use Carbon\Carbon;
-use Filament\Tables\Table; 
-use Filament\Actions\Action;
+use Filament\Tables\Table;
 use Filament\Actions\EditAction;
 use Filament\Tables\Filters\Filter;
 use Filament\Actions\BulkActionGroup;
@@ -12,46 +10,21 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 
-class SessionsTable
+class SessionTimesTable
 {
     public static function configure(Table $table): Table
     {
-        $today = strtoupper(now()->format('l'));
-        $now = now()->format('H:i:s');
-
-        return $table 
-           ->columns([ 
-                TextColumn::make('session.name')
-                ->color('primary')
-                ->weight('bold')
-                ->weight('bold')
-                ->action(
-                    Action::make('joinAndTrackAttendance')
-                    ->action(function ($record) {
-                        $currentSession = $record
-                        ->whereDate('date', now()->toDateString())
-                        ->where('from', '<=', now()->addMinutes(30)->toDateTimeString())
-                        ->where('to', '>', now()->toDateTimeString())
-                        ->first();
-
-                        if ($currentSession && !empty($currentSession->link)) {
-                            $currentSession->update([
-                                "tacher_entered" => true,
-                            ]);
-                            return redirect()->away($currentSession->link);
-                        } 
-                    })
-                )
-                ,
+        return $table
+             ->columns([
+                TextColumn::make('session.name')->searchable(),
                 TextColumn::make('teacher')
                 ->label('Teacher')
                 ->getStateUsing(function ($record) {
                     return $record
-                    ->where("teacher_id", auth()->user()->id)
                     ->whereDate('date', now()->toDateString())
                     ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
                     ->where('to', '>', now()->toDateTimeString())
-                    ->first()?->teacher?->name;
+                    ->first()?->teacher?->name ?? $record?->teacher?->name;
                 }),
                 TextColumn::make('students_count')
                 ->label('Enrolled Students')
@@ -67,7 +40,6 @@ class SessionsTable
                     return $record
                     ->whereDate('date', now()->toDateString()) 
                     ->where('to', '>', now()->toDateTimeString())
-                    ->where("teacher_id", auth()->user()->id)
                     ->first()?->students_attendance->count() ?? 0;
                 }),
                 TextColumn::make('tacher_entered')
@@ -76,28 +48,34 @@ class SessionsTable
                 ->getStateUsing(function ($record) {
                     return $record->tacher_entered ? "Yes" : "No";
                 }),
+                TextColumn::make('Warning')
+                ->label('Warning')
+                ->badge()  
+                ->getStateUsing(function ($record) {
+                    return empty($record->link) && $record
+                    ->whereDate('date', now()->toDateString()) 
+                    ->where('from', '<=', now()->addMinutes(30)->toDateTimeString())
+                    ->where('to', '>', now()->toDateTimeString())
+                    ->first() ? "Warning" : "Stable";
+                })
+                ->color(fn (string $state): string => match ($state) {
+                    'Warning' => 'danger', 
+                    'Stable' => 'success', 
+                    default => 'gray',
+                })
+                ->sortable()
             ])
             ->filters([
-                
                 Filter::make('upcoming_sessions')
-
                 ->label('Today\'s Upcoming Sessions')
-
                 ->default()
-
-                ->query(function (Builder $query) use ($today) {
-
-                    return $query->whereDate('date', now())
-                    ->where('from', '<=', now()->addMinutes(120))
-                    ->where('to', '>', now())
-                    ->where("teacher_id", auth()->user()->id);
-                }),
+                ->query(function (Builder $query) {
+                    return $query->whereDate('date', now()) 
+                    ->where('to', '>', now());
+                })
             ])
             ->recordActions([
-                EditAction::make()
-                ->label('put session link')
-                ->icon('heroicon-m-pencil-square')
-                ->color('primary'),
+                EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

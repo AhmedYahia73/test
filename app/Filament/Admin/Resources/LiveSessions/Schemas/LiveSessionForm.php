@@ -34,16 +34,6 @@ class LiveSessionForm
                     ->required()
                     ->searchable()
                     ->preload()
-                    ->afterStateHydrated(function (TextInput $component, $state, $record) {
-                        if ($record) {
-                            $today = Carbon::today()->toDateString();
-                            $savedDate = $record->date_link;
-
-                            if ($savedDate !== $today) {
-                                $component->state(null);
-                            }
-                        }
-                    })
                     ->label('Assign Teacher'),
                 ]),
 
