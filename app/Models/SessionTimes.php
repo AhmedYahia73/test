@@ -11,5 +11,18 @@ class SessionTimes extends Model
         'from',
         'to',
         'day',
-    ];
+        'date',
+        'link',
+        'teacher_id',
+    ]; 
+
+    public function students_attendance()
+    {
+        return $this->belongsToMany(User::class, "attendance_student", "session_times_id", "user_id");
+    }
+
+    public function teacher()
+    {
+        return $this->belongsTo(User::class, "teacher_id");
+    }
 }

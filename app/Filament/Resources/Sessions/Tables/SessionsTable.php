@@ -25,64 +25,61 @@ class SessionsTable
                 ->weight('bold')
                 ->action(
                     Action::make('joinAndTrackAttendance')
-                        ->action(function ($record) {
-                            $todayDate = now()->toDateString();
+                    ->action(function ($record) {
+                        $currentSession = $record->actualSessions()
+                        ->whereDate('date', now()->toDateString())
+                        ->where('from', '<=', now()->addMinutes(30)->toDateTimeString())
+                        ->where('to', '>', now()->toDateTimeString())
+                        ->first();
 
-                            // التأكد من أن الرابط صالح لليوم وموجود
-                            if ($record->date_link === $todayDate && !empty($record->link)) {
-                                
-                                // تسجيل الحضور في جدول attendance_user
-                                // نستخدم syncWithoutDetaching عشان لو ضغط أكتر من مرة ميكررش السجل
-                                $record->students_attendance()->syncWithoutDetaching([
-                                    auth()->id() => [
-                                        'date' => $todayDate,
-                                        'created_at' => now(),
-                                        'updated_at' => now(),
-                                    ]
-                                ]);
-
-                                // توجيه المستخدم للرابط في صفحة جديدة
-                                return redirect()->away($record->link);
-                            }
-                        })
+                        if ($currentSession && !empty($currentSession->link)) {
+                            $currentSession->students_attendance()->syncWithoutDetaching(auth()->id());
+                            return redirect()->away($currentSession->link);
+                        }
+                    })
                 )
-                // نجعل شكل النص يوحي بأنه قابل للضغط (اختياري)
                 ->extraAttributes([
                     'style' => 'cursor: pointer; text-decoration: underline;'
                 ])
-                    ->openUrlInNewTab(),
-
-                TextColumn::make('today_time')
-                    ->label('Starting At Today')
-                    ->dateTime('H:i A')
-                    ->getStateUsing(function ($record) use ($today) {
-                        // هنا نستخدم where العادية لأننا نتعامل مع Collection
-                        // ونقارن الوقت كنص
-                        return $record->sessionTimes
-                            ->where('day', $today)
-                            ->where('to', '>', now()->format("H:i:s"))
-                            ->first()?->from;
-                    }),
+                ->openUrlInNewTab(),
+                TextColumn::make('actualSessions')
+                ->label('Starting At Today')
+                ->dateTime('H:i A')
+                ->getStateUsing(function ($record) {
+                    return $record->actualSessions()
+                        ->whereDate('date', now()->toDateString())
+                        ->where('from', '<=', now()->addMinutes(30)->toDateTimeString())
+                        ->where('to', '>', now()->toDateTimeString())
+                        ->first()?->from;
+                }),
             ])
-            ->filters([
+            ->filters([ 
+                
                 Filter::make('upcoming_sessions')
-                    ->label('Today\'s Upcoming Sessions')
-                    ->default() 
-                    ->query(function (Builder $query) use ($today) {
-                        $currentTime = now()->format('H:i:s');
-                        $startTimeLimit = now()->addMinutes(30)->format('H:i:s');
 
-                        return $query->whereHas('sessionTimes', function (Builder $subQuery) use ($today, $currentTime, $startTimeLimit) {
-                            $subQuery->where('day', $today)
-                                ->whereTime('from', '<=', $startTimeLimit)
-                                ->whereTime('to', '>', $currentTime); 
-                        })
-                    ->whereDate("start_date", "<=", now())
-                    ->whereDate("end_date", ">=", now())
-                        ->whereHas("students", function(Builder $q) {
-                            $q->where("users.id", auth()->id());
-                        });
+                ->label('Today\'s Upcoming Sessions')
+
+                ->default()
+
+                ->query(function (Builder $query) use ($today) {
+
+                    return $query->whereHas('actualSessions', function (Builder $subQuery) {
+
+                        $subQuery->whereDate('date', now())
+
+                            ->where('from', '<=', now()->addMinutes(30))
+
+                            ->where('to', '>', now());
+
                     })
+
+                    ->whereHas("students", function(Builder $q) {
+
+                        $q->where("users.id", auth()->id());
+
+                    });
+
+                })
             ])
             ->recordActions([
                 EditAction::make(),

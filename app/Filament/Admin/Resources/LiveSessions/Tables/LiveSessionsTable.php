@@ -20,44 +20,50 @@ class LiveSessionsTable
         return $table
             ->columns([
                 TextColumn::make('name')->searchable(),
-                TextColumn::make('teacher.name')->label('Teacher'),
-                TextColumn::make('sessionTimes_count')
-                ->counts('sessionTimes')
-                ->label('Slots Count'),
-                TextColumn::make('student_count')
-                ->label('Enrolled Students')
-                ->badge()  
-                ->counts('students') 
-                ->sortable(), 
-                TextColumn::make('attendance_today_count')
-                ->label('Attendance (Today)')
-                ->badge()
-                ->color('success')
-                ->getStateUsing(function ($record) {
-                    // عدّ السجلات في جدول الحضور التي تطابق اليوم لهذه الحصة
-                    return $record->students_attendance()
-                        ->wherePivot('date', now()->toDateString())
-                        ->count();
+                TextColumn::make('teacher')
+                ->label('Teacher')
+                ->getStateUsing(function ($record) use ($today, $now) {
+                    return $record->actualSessions()
+                    ->whereDate('date', now()->toDateString())
+                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
+                    ->where('to', '>', now()->toDateTimeString())
+                    ->first()?->teacher?->name ?? $record?->teacher?->name;
                 }),
+                TextColumn::make('students_count')
+                ->label('Enrolled Students')
+                ->counts('students')
+                ->badge()  
+                ->sortable(),
+                TextColumn::make('student_entered')
+                ->label('Students Entered')
+                ->badge()  
+                ->getStateUsing(function ($record) use ($today, $now) {
+                    return $record->actualSessions()
+                    ->whereDate('date', now()->toDateString())
+                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
+                    ->where('to', '>', now()->toDateTimeString())
+                    ->first()?->students_attendance->count() ?? 0;
+                }),
+                TextColumn::make('teacher_entered')
+                ->label('Teacher Entered')
+                ->badge()  
+                ->getStateUsing(function ($record) use ($today, $now) {
+                    return $record->actualSessions()
+                    ->whereDate('date', now()->toDateString())
+                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
+                    ->where('to', '>', now()->toDateTimeString())
+                    ->first()?->teacher_id ? "Yes" : "No";
+                })
             ])
             ->filters([
                 Filter::make('upcoming_sessions')
                 ->label('Today\'s Upcoming Sessions')
-                ->default() 
-                ->query(function (Builder $query) {
-                    $today = strtoupper(now()->format('l'));
-                    $currentTime = now();
-
-                    return $query->whereHas('sessionTimes', function (Builder $subQuery) use ($today, $currentTime) {
-                        $subQuery->where('day', $today)
-                        ->whereTime('from', '<=', $currentTime->copy()->addMinutes(30)->format('H:i:s'))
-                        ->whereTime('to', '>=', $currentTime->format('H:i:s'));
-                    })
-                    ->whereDate("start_date", "<=", now())
-                    ->whereDate("end_date", ">=", now())
-                    ->whereDate("date_link", $currentTime)
-                    ->whereHas("students", function($query){
-                        $query->where("users.id", auth()->user()->id);
+                ->default()
+                ->query(function (Builder $query) use ($today) {
+                    return $query->whereHas('actualSessions', function (Builder $subQuery) {
+                        $subQuery->whereDate('date', now())
+                        ->where('from', '<=', now()->addMinutes(120))
+                        ->where('to', '>', now());
                     });
                 })
             ])

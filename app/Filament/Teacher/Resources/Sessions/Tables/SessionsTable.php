@@ -24,55 +24,75 @@ class SessionsTable
                 ->color('primary')
                 ->weight('bold')
                 ->url(function ($record) {
-                    $today = now()->toDateString();
+                    $session = $record->actualSessions()
+                    ->whereDate('date', now()->toDateString())
+                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
+                    ->where('to', '>', now()->toDateTimeString())
+                    ->first();
+                 
+                    if ($session && !empty($session->link)) {
+                        $session->students_attendance()->syncWithoutDetaching(auth()->id());
+
+                        return redirect()->away($session->link);
                     
-                    if ($record->date_link === $today && !empty($record->link)) {
-                        return $record->link;
                     }
                     
                     return null;
                 })
                 ->openUrlInNewTab(),
-                TextColumn::make('student_count')
+                TextColumn::make('students_count')
                 ->label('Enrolled Students')
+                ->counts('students')
                 ->badge()  
                 ->sortable(),
-                TextColumn::make('students_count')
+                TextColumn::make('student_entered')
                 ->label('Students Entered')
-                ->badge() 
-                ->counts('students') 
+                ->badge()  
+                ->getStateUsing(function ($record) use ($today, $now) {
+                    return $record->actualSessions()
+                    ->whereDate('date', now()->toDateString())
+                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
+                    ->where('to', '>', now()->toDateTimeString())
+                    ->first()?->students_attendance->count() ?? 0;
+                })
                 ->sortable(),
                 TextColumn::make('today_time')
                 ->label('Starting At Today')
                 ->dateTime('H:i A')
                 ->getStateUsing(function ($record) use ($today, $now) {
-                    return $record->sessionTimes
-                        ->where('day', $today)
-                        ->where('from', '>', $now)
-                        ->first()?->from;
+                    return $record->actualSessions()
+                    ->whereDate('date', now()->toDateString())
+                    ->where('from', '<=', now()->addMinutes(120)->toDateTimeString())
+                    ->where('to', '>', now()->toDateTimeString())
+                    ->first()?->from;
                 }),
             ])
             ->filters([
+                
                 Filter::make('upcoming_sessions')
-                ->label('Today\'s Upcoming Sessions')
-                ->default() 
-                ->query(function (Builder $query) {
-                    $today = strtoupper(now()->format('l'));
-                    $currentTime = now();
 
-                    return $query->whereHas('sessionTimes', function (Builder $subQuery) use ($today, $currentTime) {
-                        $subQuery->where('day', $today)
-                        ->whereTime('from', '<=', $currentTime->copy()->addHours(2)->format('H:i:s'))
-                        ->whereTime('to', '>=', $currentTime->format('H:i:s'));
+                ->label('Today\'s Upcoming Sessions')
+
+                ->default()
+
+                ->query(function (Builder $query) use ($today) {
+
+                    return $query->whereHas('actualSessions', function (Builder $subQuery) {
+
+                        $subQuery->whereDate('date', now())
+
+                            ->where('from', '<=', now()->addMinutes(120))
+
+                            ->where('to', '>', now());
+
                     })
-                    ->whereDate("start_date", "<=", now())
-                    ->whereDate("end_date", ">=", now());
+                    ->where("teacher_id", auth()->user()->id);
                 })
             ])
             ->recordActions([
                 EditAction::make()
-                ->label('put session link') // المسمى الجديد اللي إنت عاوزه هنا
-                ->icon('heroicon-m-pencil-square') // لو حابب تغير الأيقونة كمان
+                ->label('put session link')
+                ->icon('heroicon-m-pencil-square')
                 ->color('primary'),
             ])
             ->toolbarActions([

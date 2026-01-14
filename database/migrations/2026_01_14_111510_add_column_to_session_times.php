@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('attendance_user', function (Blueprint $table) {
-            $table->date("date")->useCurrent();
+        Schema::table('session_times', function (Blueprint $table) {
+            $table->string("link")->nullable();
         });
     }
 
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('attendance_user', function (Blueprint $table) {
+        Schema::table('session_times', function (Blueprint $table) {
             //
         });
     }
